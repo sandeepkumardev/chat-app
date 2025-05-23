@@ -1,0 +1,22 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chat App</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  </head>
+  <body>
+    <nav>
+      <header style="background: #f5f5f5; padding: 10px">
+        <a href="{% url 'home' %}">🏠 Home</a> | <a href="{% url 'create_room' %}">➕ Create Room</a> |
+        <a href="{% url 'profile' %}">👤 Profile</a>
+        {% if user.is_staff %} | <a href="{% url 'admin_dashboard' %}">📊 Admin Dashboard</a> {% endif %} |
+        <a href="{% url 'logout' %}">🚪 Logout</a>
+      </header>
+    </nav>
+    <hr />
+    {% block content %}{% endblock %}
+  </body>
+</html>

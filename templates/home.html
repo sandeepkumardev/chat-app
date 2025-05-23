@@ -1,0 +1,15 @@
+{% extends 'base.html' %} {% block content %}
+<h2>Welcome {{ request.user.username }}</h2>
+<a href="{% url 'create_room' %}">➕ Create New Room</a>
+
+<h3>Available Chat Rooms</h3>
+<ul>
+  {% for room in rooms %}
+  <li>
+    <a href="{% url 'room_detail' room.name %}">{{ room.name }}</a>
+  </li>
+  {% empty %}
+  <li>No rooms available</li>
+  {% endfor %}
+</ul>
+{% endblock %}
