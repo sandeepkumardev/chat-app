@@ -177,7 +177,11 @@
         console.warn("No active room or private chat selected.");
       } else {
         const chatSocket = new WebSocket(
-          "ws://" + window.location.host + (isPrivateChat ? "/ws/private/" : "/ws/chat/") + activeRoomSlug + "/"
+          (window.location.protocol === "https:" ? "wss://" : "ws://") +
+            window.location.host +
+            (isPrivateChat ? "/ws/private/" : "/ws/chat/") +
+            activeRoomSlug +
+            "/"
         );
 
         chatBox.scrollTop = chatBox.scrollHeight;
