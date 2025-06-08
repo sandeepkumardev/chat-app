@@ -28,6 +28,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'https://chat-app-4wx5.onrender.com/'
+]
+
 APPEND_SLASH = False
 
 # Application definition
