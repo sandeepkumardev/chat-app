@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
-    'https://chat-app-4wx5.onrender.com/'
+    'https://chat-app-4wx5.onrender.com'
 ]
 
 APPEND_SLASH = False
