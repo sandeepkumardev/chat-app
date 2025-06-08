@@ -1,15 +1,340 @@
 {% extends 'base.html' %} {% block content %}
-<h2>Welcome {{ request.user.username }}</h2>
-<a href="{% url 'create_room' %}">➕ Create New Room</a>
+<div class="flex h-[78vh] border rounded-lg overflow-hidden shadow-sm">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white border-r overflow-y-auto">
+    <div class="p-4 border-b">
+      <h2 class="text-xl font-semibold text-indigo-600">👋 Welcome, {{ request.user.first_name }}</h2>
+      <!-- <a href="{% url 'create_room' %}" class="mt-2 inline-block text-sm text-indigo-500 hover:underline"
+        >➕ Create New Room</a
+      > -->
 
-<h3>Available Chat Rooms</h3>
-<ul>
-  {% for room in rooms %}
-  <li>
-    <a href="{% url 'room_detail' room.name %}">{{ room.name }}</a>
-  </li>
-  {% empty %}
-  <li>No rooms available</li>
-  {% endfor %}
-</ul>
+      <div class="mt-4 text-sm text-gray-600">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search users or rooms..."
+          class="w-full px-3 py-2 border rounded focus:outline-indigo-500"
+        />
+        <div id="create-room-btn-container" class="mt-2 hidden">
+          <button id="create-room-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+            Create Room "<span id="create-room-name"></span>"
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">Available Users</h3>
+      <ul class="space-y-2">
+        {% for user in users %}
+        <a
+          href="/?chat={{ user.username }}"
+          class="block px-4 py-2 rounded text-gray-700 flex items-center justify-between group hover:bg-indigo-100"
+        >
+          {{ user.first_name }}
+        </a>
+        {% empty %}
+        <li class="text-gray-400 text-sm">No users available</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="p-4">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">Available Rooms</h3>
+      <ul class="space-y-2">
+        {% for room in rooms %}
+        <a
+          href="/?room={{ room.slug }}"
+          class="block px-4 py-2 rounded text-gray-700 flex items-center justify-between group hover:bg-indigo-100"
+        >
+          {{ room.name }} {% if room.created_by == request.user %}
+          <form
+            action="{% url 'delete_room' room.id %}?next=home"
+            method="post"
+            onsubmit="return confirm('Are you sure you want to delete this room?');"
+            class="inline mt-1"
+          >
+            {% csrf_token %}
+            <button
+              type="submit"
+              title="Delete room"
+              class="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </form>
+          {% endif %}
+        </a>
+        {% empty %}
+        <li class="text-gray-400 text-sm">No rooms available</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Chat Display -->
+  <main class="flex-1 px-4 bg-gray-50 flex flex-col">
+    {% if selected_room or private_room %} {% if selected_room %}
+    <h2 class="text-xl font-bold my-2">Room: {{ selected_room.name }}</h2>
+    {% else %}
+    <h2 class="text-xl font-bold my-2">Chat with: {{ selected_user.first_name }}</h2>
+    {% endif %}
+
+    <div class="flex flex-col justify-between overflow-y-auto h-full mb-4">
+      <div id="chat-box" class="border p-4 flex-1 overflow-y-scroll bg-white rounded mb-4 space-y-2">
+        {% for msg in messages %}
+        <div>
+          {% if selected_room %} {% if msg.user %} {% if msg.user == request.user %}
+          <!-- Message by current user -->
+          <div class="text-right">
+            <div class="inline-block bg-blue-100 text-blue-900 px-3 py-2 rounded-lg">
+              <div class="flex justify-between gap-10 items-center text-sm">
+                <p class="font-semibold">{{ msg.user.first_name }}</p>
+                <small class="text-gray-500 text-xs">{{ msg.timestamp|date:"H:i" }}</small>
+              </div>
+              <p>{{ msg.content }}</p>
+            </div>
+          </div>
+          {% else %}
+          <!-- Message by other users -->
+          <div class="text-left">
+            <div class="inline-block bg-gray-100 text-gray-800 px-3 py-2 rounded-lg">
+              <div class="flex justify-between gap-10 items-center text-sm">
+                <p class="font-semibold">{{ msg.user.first_name }}</p>
+                <small class="text-gray-500 text-xs">{{ msg.timestamp|date:"H:i" }}</small>
+              </div>
+              <p>{{ msg.content }}</p>
+            </div>
+          </div>
+          {% endif %} {% else %}
+          <!-- System message -->
+          <div class="text-center">
+            <p class="text-gray-500 text-xs italic">{{ msg.content }}</p>
+          </div>
+          {% endif %} {% endif %}
+        </div>
+
+        <div>
+          {% if private_room %} {% if msg.sender %} {% if msg.sender == request.user %}
+          <!-- Message by current user -->
+          <div class="text-right">
+            <div class="inline-block bg-blue-100 text-blue-900 px-3 py-2 rounded-lg">
+              <div class="flex justify-between gap-10 items-center text-sm">
+                <p class="font-semibold">{{ msg.sender.first_name }}</p>
+                <small class="text-gray-500 text-xs">{{ msg.timestamp|date:"H:i" }}</small>
+              </div>
+              <p>{{ msg.content }}</p>
+            </div>
+          </div>
+          {% else %}
+          <!-- Message by other users -->
+          <div class="text-left">
+            <div class="inline-block bg-gray-100 text-gray-800 px-3 py-2 rounded-lg">
+              <div class="flex justify-between gap-10 items-center text-sm">
+                <p class="font-semibold">{{ msg.sender.first_name }}</p>
+                <small class="text-gray-500 text-xs">{{ msg.timestamp|date:"H:i" }}</small>
+              </div>
+              <p>{{ msg.content }}</p>
+            </div>
+          </div>
+          {% endif %} {% endif %} {% endif %}
+        </div>
+
+        {% endfor %}
+      </div>
+
+      <form id="chat-form" class="flex gap-2">
+        <input
+          type="text"
+          id="message-input"
+          class="flex-1 border px-4 py-2 rounded"
+          placeholder="Type a message..."
+          autocomplete="off"
+          required
+        />
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Send</button>
+      </form>
+    </div>
+
+    <script>
+      const currentUsername = "{{ request.user.username|escapejs }}";
+      const chatBox = document.getElementById("chat-box");
+      const roomSlug = "{{ selected_room.slug|default:'' }}";
+      const privateRoomSlug = "{{ private_room.room_slug|default:'' }}";
+
+      // Determine chat type
+      const isPrivateChat = Boolean("{{ private_room.room_slug|default:'' }}");
+      const activeRoomSlug = isPrivateChat ? privateRoomSlug : roomSlug;
+
+      if (!activeRoomSlug) {
+        console.warn("No active room or private chat selected.");
+      } else {
+        const chatSocket = new WebSocket(
+          "ws://" + window.location.host + (isPrivateChat ? "/ws/private/" : "/ws/chat/") + activeRoomSlug + "/"
+        );
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        chatSocket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          let messageHtml = "";
+
+          if (data.username === "System") {
+            messageHtml = `
+              <div class="text-center">
+                <p class="text-gray-500 text-xs italic">${data.message}</p>
+              </div>`;
+          } else if (data.username === currentUsername) {
+            messageHtml = `
+              <div class="text-right">
+                <div class="inline-block bg-blue-100 text-blue-900 px-3 py-2 rounded-lg mb-1">
+                  <div class="flex justify-between gap-10 items-center text-sm">
+                    <p class="font-semibold">${currentUsername}</p>
+                    <small class="text-gray-500 text-xs">${new Date().toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}</small>
+                  </div>
+                  <p>${data.message}</p>
+                </div>
+              </div>`;
+          } else {
+            messageHtml = `
+              <div class="text-left">
+                <div class="inline-block bg-gray-100 text-gray-800 px-3 py-2 rounded-lg mb-1">
+                  <div class="flex justify-between gap-10 items-center text-sm">
+                    <p class="font-semibold">${data.name}</p>
+                    <small class="text-gray-500 text-xs">${new Date().toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}</small>
+                  </div>
+                  <p>${data.message}</p>
+                </div>
+              </div>`;
+          }
+
+          chatBox.innerHTML += messageHtml;
+          chatBox.scrollTop = chatBox.scrollHeight;
+
+          // Notification
+          if (document.hidden && data.username !== currentUsername && data.username !== "System") {
+            const sound = document.getElementById("notification-sound");
+            sound.play().catch(() => {
+              console.log("Notification sound blocked by browser.");
+            });
+          }
+        };
+
+        chatSocket.onclose = function () {
+          console.error("Chat socket closed unexpectedly");
+        };
+
+        document.getElementById("chat-form").onsubmit = function (e) {
+          e.preventDefault();
+          const messageInput = document.getElementById("message-input");
+          const message = messageInput.value;
+          const username = currentUsername;
+          if (message.trim()) {
+            chatSocket.send(JSON.stringify({ message, username, name: "{{ request.user.first_name|escapejs }}" }));
+            messageInput.value = "";
+          }
+        };
+      }
+    </script>
+    {% else %} {% if error_message %} {% for err in error_message %}
+    <p class="text-red-500 text-center my-6">{{ err }}</p>
+    <a href="." class="block text-center text-indigo-500 hover:underline">Go to Home</a>
+    {% endfor %} {% else %}
+    <div>
+      <h2 class="text-2xl font-semibold text-gray-700 my-2">Select a Room</h2>
+      <p class="text-gray-500">Click on a chat room from the left sidebar to start messaging.</p>
+    </div>
+    {% endif %} {% endif %}
+  </main>
+
+  <!-- Search bar -->
+  <script>
+    const searchInput = document.getElementById("search-input");
+    const createRoomBtnContainer = document.getElementById("create-room-btn-container");
+    const createRoomNameSpan = document.getElementById("create-room-name");
+    const createRoomBtn = document.getElementById("create-room-btn");
+
+    const usersListItems = [...document.querySelectorAll("div.p-4 ul:nth-of-type(1) a")];
+    const roomsListItems = [...document.querySelectorAll("div.p-4 ul:nth-of-type(2) a")];
+
+    function normalize(str) {
+      return str.toLowerCase();
+    }
+
+    function filterLists() {
+      const query = normalize(searchInput.value.trim());
+
+      if (!query) {
+        // Show all and hide create button
+        usersListItems.forEach((item) => (item.style.display = ""));
+        roomsListItems.forEach((item) => (item.style.display = ""));
+        createRoomBtnContainer.classList.add("hidden");
+        return;
+      }
+
+      let userMatch = false;
+      usersListItems.forEach((item) => {
+        const text = normalize(item.textContent || "");
+        const matched = text.includes(query);
+        item.style.display = matched ? "" : "none";
+        if (matched) userMatch = true;
+      });
+
+      let roomMatch = false;
+      roomsListItems.forEach((item) => {
+        const text = normalize(item.textContent || "");
+        const matched = text.includes(query);
+        item.style.display = matched ? "" : "none";
+        if (matched) roomMatch = true;
+      });
+
+      // If no room matches, show create button with the query as room name
+      if (!roomMatch && query.length > 0) {
+        createRoomNameSpan.textContent = query;
+        createRoomBtnContainer.classList.remove("hidden");
+      } else {
+        createRoomBtnContainer.classList.add("hidden");
+      }
+    }
+
+    searchInput.addEventListener("input", filterLists);
+
+    // On clicking the create room button, send a POST request to create the room
+    createRoomBtn.addEventListener("click", () => {
+      const roomName = searchInput.value.trim();
+      if (!roomName) return;
+
+      fetch("/create_room_ajax/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+        body: JSON.stringify({ name: roomName }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            // Redirect or reload with new room selected
+            window.location.href = "/?room=" + data.slug;
+          } else {
+            alert(data.error || "Could not create room");
+          }
+        });
+    });
+  </script>
+</div>
 {% endblock %}
