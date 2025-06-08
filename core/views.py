@@ -52,7 +52,7 @@ def home(request):
     list(storage)
 
     rooms = Room.objects.all()
-    users = User.objects.all()
+    users = User.objects.exclude(id=request.user.id)
 
     # private_rooms = PrivateRoom.objects.filter(Q(user1=request.user) | Q(user2=request.user))
     # # Extract users from those private rooms, excluding self
